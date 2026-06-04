@@ -1,0 +1,6 @@
+{
+  "name": "SaccoOS",
+  "description": "SaccoOS is a unified modern fintech operating system for Savings and Credit Co-operatives (SACCOs). Integrates multi-role finance dashboards, self-service wallets, SME business portfolios, automatic ledger auditing, and AI credit risk evaluation using Google Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
