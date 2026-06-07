@@ -13,9 +13,9 @@ export default async function StatementsPage() {
   const payments = await getMemberPayments(member.id);
   const statements = payments.length > 0
     ? payments.map((payment) => ({
-        period: new Date(payment.created_at || payment.completed_at || Date.now()).toLocaleString('default', { month: 'long', year: 'numeric' }),
+        period: (payment.created_at || payment.completed_at) ? new Date(payment.created_at || payment.completed_at).toLocaleString('default', { month: 'long', year: 'numeric' }) : 'Current',
         status: payment.status === 'completed' ? 'Ready' : 'In progress',
-        generatedAt: new Date(payment.created_at || payment.completed_at || Date.now()).toLocaleDateString(),
+        generatedAt: (payment.created_at || payment.completed_at) ? new Date(payment.created_at || payment.completed_at).toLocaleDateString() : 'N/A',
         id: payment.id || payment.internal_reference,
       }))
     : [

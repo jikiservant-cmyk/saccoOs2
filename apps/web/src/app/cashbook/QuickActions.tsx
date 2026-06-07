@@ -1,19 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState } from 'react';
-import { addBusinessTransaction, depositToSacco } from './actions';
-import { BusinessTransactionType } from '@sacco/core';
+import { addBusinessTransaction, topUpWallet, withdrawFromWallet } from './actions';
+import { BusinessTransactionType, ROLES } from '@sacco/core';
 
 interface QuickActionsProps {
   businessId: string;
+  role: string | null;
+  context?: 'business' | 'wallet' | 'all';
 }
 
-export default function QuickActions({ businessId }: QuickActionsProps) {
+export default function QuickActions({ businessId, role, context = 'all' }: QuickActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [type, setType] = useState<BusinessTransactionType | 'deposit'>('income');
+  const [type, setType] = useState<BusinessTransactionType | 'topup' | 'withdraw'>('income');
   const [loading, setLoading] = useState(false);
 
-  const openModal = (t: BusinessTransactionType | 'transfer' | 'reports' | 'deposit') => {
+  const openModal = (t: BusinessTransactionType | 'transfer' | 'reports' | 'topup' | 'withdraw') => {
     if (t === 'transfer' || t === 'reports') {
       alert(`${t.charAt(0).toUpperCase() + t.slice(1)} module coming soon!`);
       return;
@@ -26,14 +29,25 @@ export default function QuickActions({ businessId }: QuickActionsProps) {
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    formData.append('businessId', businessId);
-    formData.append('type', type);
     formData.append('date', new Date().toISOString());
 
-    if (type === 'deposit') {
-      const depositAmount = parseFloat(formData.get('amount') as string);
+    if (type === 'topup') {
+      const amount = parseFloat(formData.get('amount') as string);
       const description = formData.get('description') as string;
-      const result = await depositToSacco(depositAmount, description);
+      const result = await topUpWallet(amount, description || 'Top Up Wallet');
+      setLoading(false);
+      if (result.success) {
+        setIsOpen(false);
+      } else {
+        alert('Error: ' + result.error);
+      }
+      return;
+    }
+    
+    if (type === 'withdraw') {
+      const amount = parseFloat(formData.get('amount') as string);
+      const description = formData.get('description') as string;
+      const result = await withdrawFromWallet(amount, description || 'Withdraw from Wallet');
       setLoading(false);
       if (result.success) {
         setIsOpen(false);
@@ -43,6 +57,14 @@ export default function QuickActions({ businessId }: QuickActionsProps) {
       return;
     }
 
+    if (!businessId) {
+      alert("No business found!");
+      setLoading(false);
+      return;
+    }
+
+    formData.append('businessId', businessId);
+    formData.append('type', type as string);
     const result = await addBusinessTransaction(formData);
     setLoading(false);
     
@@ -53,25 +75,44 @@ export default function QuickActions({ businessId }: QuickActionsProps) {
     }
   };
 
+  const actions = [];
+  if ((context === 'business' || context === 'all') && role === ROLES.SME_OWNER) {
+    actions.push({ label: 'Income', icon: 'inc', type: 'income' as const, path: <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /> });
+    actions.push({ label: 'Expense', icon: 'exp', type: 'expense' as const, path: <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /> });
+  }
+  
+  if ((context === 'wallet' || context === 'all') && (role === ROLES.MEMBER || role === ROLES.SME_OWNER)) {
+    actions.push({ label: 'Top Up', icon: 'trf', type: 'topup' as const, path: <><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></> });
+    actions.push({ label: 'Withdraw', icon: 'rep', type: 'withdraw' as const, path: <><polyline points="17 11 12 16 7 11"/><line x1="12" y1="4" x2="12" y2="16"/><line x1="4" y1="20" x2="20" y2="20"/></> });
+  }
+
+  // Determine button styles based on context
+  const isWalletContext = context === 'wallet';
+
   return (
     <>
-      <div className="actions-grid grid grid-cols-4 gap-[10px] mb-[26px]">
-        {[
-          { label: 'Income', icon: 'inc', type: 'income' as const, path: <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /> },
-          { label: 'Expense', icon: 'exp', type: 'expense' as const, path: <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /> },
-          { label: 'Deposit to Sacco', icon: 'trf', type: 'deposit' as const, path: <><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></> },
-          { label: 'Reports', icon: 'rep', type: 'reports' as const, path: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></> },
-        ].map((action) => (
+      <div className={`actions-grid w-full grid gap-[10px] ${isWalletContext ? 'mb-0' : 'mb-[26px]'} ${
+        actions.length === 4 ? 'grid-cols-4' : 
+        actions.length === 2 ? 'grid-cols-2' : 
+        'grid-cols-3'
+      }`}>
+        {actions.map((action) => (
           <button 
             key={action.label} 
             onClick={() => openModal(action.type)}
-            className="action-btn flex flex-col items-center gap-[9px] bg-[var(--card)] border border-[var(--border2)] rounded-[18px] p-[16px_6px_13px] cursor-pointer transition-all hover:-translate-y-[3px] hover:shadow-[0_8px_24px_rgba(14,140,114,0.15)] active:scale-[0.96]"
+            className={`action-btn flex flex-col items-center gap-[9px] ${
+              isWalletContext 
+                ? 'bg-white/10 border border-white/10 text-white hover:bg-white/20' 
+                : 'bg-[var(--card)] border border-[var(--border2)] hover:shadow-[0_8px_24px_rgba(14,140,114,0.15)]'
+            } rounded-[18px] p-[16px_6px_13px] cursor-pointer transition-all hover:-translate-y-[3px] active:scale-[0.96]`}
           >
             <div className={`a-ico ${action.icon} w-[44px] h-[44px] rounded-[14px] flex items-center justify-center
-              ${action.icon === 'inc' ? 'bg-[var(--green-lt)] text-[var(--green)]' : 
-                action.icon === 'exp' ? 'bg-[var(--red-lt)] text-[var(--red)]' : 
-                action.icon === 'trf' ? 'bg-[var(--teal-lt)] text-[var(--teal)]' : 
-                'bg-[var(--gold-lt)] text-[var(--gold-dark)]'}
+              ${isWalletContext 
+                 ? 'bg-white/20 text-white' 
+                 : action.icon === 'inc' ? 'bg-[var(--green-lt)] text-[var(--green)]' 
+                 : action.icon === 'exp' ? 'bg-[var(--red-lt)] text-[var(--red)]' 
+                 : action.icon === 'trf' ? 'bg-[var(--teal-lt)] text-[var(--teal)]' 
+                 : 'bg-[var(--gold-lt)] text-[var(--gold-dark)]'}
             `}>
               <svg className="w-[20px] h-[20px] stroke-current stroke-[2] fill-none" viewBox="0 0 24 24">
                 {action.path}
@@ -79,7 +120,7 @@ export default function QuickActions({ businessId }: QuickActionsProps) {
                 {action.icon === 'exp' && <polyline points="17 18 23 18 23 12" />}
               </svg>
             </div>
-            <span className="a-lbl text-[11px] text-[var(--muted)] font-semibold">{action.label}</span>
+            <span className={`a-lbl text-[11px] font-semibold ${isWalletContext ? 'text-white/80' : 'text-[var(--muted)]'}`}>{action.label}</span>
           </button>
         ))}
       </div>
@@ -112,12 +153,12 @@ export default function QuickActions({ businessId }: QuickActionsProps) {
                 />
               </div>
 
-              {type !== 'deposit' && (
+              {type !== 'topup' && type !== 'withdraw' && (
                 <div>
                   <label className="block font-mono text-[10px] font-bold uppercase tracking-[2px] text-[var(--muted2)] mb-2">Category</label>
                   <select 
                     name="category" 
-                    required={(type as string) !== 'deposit'}
+                    required={type === 'income' || type === 'expense'}
                     className="w-full px-4 py-3.5 bg-[var(--bg)]/30 border border-[var(--border2)] rounded-2xl text-sm font-sans font-medium text-[var(--navy)] focus:outline-none focus:ring-2 focus:ring-[var(--teal)]/20 appearance-none"
                   >
                     {type === 'income' ? (

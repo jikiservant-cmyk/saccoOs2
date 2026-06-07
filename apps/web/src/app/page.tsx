@@ -18,11 +18,11 @@ async function getMembers(): Promise<Member[]> {
     return [];
   }
 
-  return (data as any[])?.map(m => ({
+  return (data || [])?.map((m: Record<string, unknown>) => ({
     ...m,
-    created_at: new Date(m.created_at),
-    updated_at: new Date(m.updated_at),
-    deleted_at: m.deleted_at ? new Date(m.deleted_at) : undefined,
+    created_at: new Date(m.created_at as string),
+    updated_at: new Date(m.updated_at as string),
+    deleted_at: m.deleted_at ? new Date(m.deleted_at as string) : undefined,
   })) as Member[];
 }
 

@@ -92,7 +92,9 @@ export default async function MyWalletPage() {
                             {tx.status || 'pending'}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-gray-400">{new Date(tx.created_at || tx.completed_at || Date.now()).toLocaleDateString()}</td>
+                        <td className="px-4 py-4 text-gray-400">
+                          {tx.created_at || tx.completed_at ? new Date(tx.created_at || tx.completed_at).toLocaleDateString() : 'N/A'}
+                        </td>
                       </tr>
                     ))
                   )}

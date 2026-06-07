@@ -20,7 +20,7 @@ export async function login(formData: FormData) {
 
   if (authData.user) {
     const { data: profile } = await supabase
-      .schema('sacco')
+      
       .from('profiles')
       .select('is_platform_admin, roles')
       .eq('id', authData.user.id)
@@ -81,7 +81,7 @@ export async function signup(formData: FormData) {
     // 1. Ensure Profile exists with the chosen role
     // Using upsert since the user might already have an auth record but no profile
     const { error: profileError } = await supabase
-      .schema('sacco')
+      
       .from('profiles')
       .upsert({
         id: data.user.id,
@@ -101,7 +101,7 @@ export async function signup(formData: FormData) {
         // 2. Ensure a default Business exists for SME owners and members
         if (role === 'business_owner' || role === 'member') {
           const { data: existingBiz } = await supabase
-            .schema('sacco')
+            
             .from('businesses')
             .select('id')
             .eq('owner_profile_id', data.user.id)
@@ -109,7 +109,7 @@ export async function signup(formData: FormData) {
 
           if (!existingBiz) {
             const { error: bizError } = await supabase
-              .schema('sacco')
+              
               .from('businesses')
               .insert({
                 owner_profile_id: data.user.id,

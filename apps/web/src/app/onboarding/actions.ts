@@ -17,7 +17,7 @@ export async function selectOrganization(formData: FormData) {
 
   // Get the user's business
   const { data: business, error: fetchError } = await supabase
-    .schema('sacco')
+    
     .from('businesses')
     .select('id')
     .eq('owner_profile_id', user.id)
@@ -32,7 +32,7 @@ export async function selectOrganization(formData: FormData) {
   if (isIndependent) {
     // Record that this business is independent
     const { error: insertError } = await supabase
-      .schema('sacco')
+      
       .from('business_organizations')
       .insert([
         {
@@ -56,7 +56,7 @@ export async function selectOrganization(formData: FormData) {
   if (organizationId) {
     // Create a pending relationship with the organization
     const { error } = await supabase
-      .schema('sacco')
+      
       .from('business_organizations')
       .insert([
         {

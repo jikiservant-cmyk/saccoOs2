@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Sidebar from '@/components/layout/Sidebar';
 import { ROLES } from '@sacco/core';
 import { redirect } from 'next/navigation';

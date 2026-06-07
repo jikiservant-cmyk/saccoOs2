@@ -6,7 +6,7 @@ export async function getUserRole(userId: string, context?: { organizationId?: s
 
   // 1. Check for Platform Admin (Super Admin) and generic roles in Profile
   const { data: profile } = await supabase
-    .schema('sacco')
+    
     .from('profiles')
     .select('is_platform_admin, roles')
     .eq('id', userId)
@@ -27,7 +27,7 @@ export async function getUserRole(userId: string, context?: { organizationId?: s
   // 2. Check for SACCO Organization Role (Specific to an Org)
   if (context?.organizationId) {
     const { data } = await supabase
-      .schema('sacco')
+      
       .from('user_org_roles')
       .select('role')
       .eq('user_id', userId)
@@ -40,7 +40,7 @@ export async function getUserRole(userId: string, context?: { organizationId?: s
   // 3. Check for SME Business Role
   if (context?.businessId) {
     const { data } = await supabase
-      .schema('sacco')
+      
       .from('business_users')
       .select('role')
       .eq('profile_id', userId)
@@ -52,7 +52,7 @@ export async function getUserRole(userId: string, context?: { organizationId?: s
 
   // 4. Fallback: Check if they are a Member of any SACCO
   const { data: memberRecord } = await supabase
-    .schema('sacco')
+    
     .from('members')
     .select('id')
     .eq('profile_id', userId)

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Sidebar from '@/components/layout/Sidebar';
 import { ROLES } from '@sacco/core';
 import { createClient } from '@/utils/supabase/server';
@@ -45,7 +46,7 @@ async function getSaccoMembers() {
   if (!orgRole) return [];
 
   const { data, error } = await supabase
-    .schema('sacco')
+    
     .from('profiles')
     .select('*')
     .contains('roles', ['member']);

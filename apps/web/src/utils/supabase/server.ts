@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
@@ -21,7 +22,7 @@ export async function createClient() {
         update: async () => ({ data: null, error: null }),
         delete: async () => ({ data: null, error: null }),
       }),
-    } as any;
+    } as unknown as ReturnType<typeof createServerClient>;
   }
 
   return createServerClient(

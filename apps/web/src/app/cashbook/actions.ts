@@ -8,7 +8,7 @@ export async function getBusinessTransactions(businessId: string) {
   const supabase = await createClient();
   
   const { data, error } = await supabase
-    .schema('sacco')
+    
     .from('business_transactions')
     .select('*')
     .eq('business_id', businessId)
@@ -30,14 +30,14 @@ export async function addBusinessTransaction(formData: FormData) {
   const amount = parseFloat(formData.get('amount') as string);
   const category = formData.get('category') as string;
   const description = formData.get('description') as string;
-  const paymentMethod = formData.get('paymentMethod') as any;
+  const paymentMethod = formData.get('paymentMethod') as string;
   const transactionDate = formData.get('date') as string;
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { error } = await supabase
-    .schema('sacco')
+    
     .from('business_transactions')
     .insert([
       {
@@ -61,7 +61,57 @@ export async function addBusinessTransaction(formData: FormData) {
   return { success: true };
 }
 
-export async function depositToSacco(amount: number, description: string) {
+export async function topUpWallet(amount: number, description: string) {
+  return depositToSacco(amount, description);
+}
+
+export async function withdrawFromWallet(amount: number, _description: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: orgRole } = await supabase
+    .from('user_org_roles')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!orgRole) return { error: 'Not a member of any SACCO' };
+
+  const { data: userWallet } = await supabase
+    
+    .schema('sacco').from('wallets')
+    .select('*')
+    .eq('profile_id', user.id)
+    .single();
+
+  if (!userWallet || userWallet.balance < amount) {
+    return { error: 'Insufficient funds' };
+  }
+
+  await supabase.schema('sacco').from('wallets')
+    .update({ balance: userWallet.balance - amount })
+    .eq('id', userWallet.id);
+
+  const { data: saccoWallets } = await supabase
+    
+    .schema('sacco').from('wallets')
+    .select('*')
+    .eq('organization_id', orgRole.organization_id);
+
+  const saccoWallet = saccoWallets && saccoWallets.length > 0 ? saccoWallets[0] : null;
+
+  if (saccoWallet) {
+     await supabase.schema('sacco').from('wallets')
+      .update({ balance: saccoWallet.balance - amount })
+      .eq('id', saccoWallet.id);
+  }
+
+  revalidatePath('/cashbook');
+  revalidatePath('/admin');
+  return { success: true };
+}
+export async function depositToSacco(amount: number, _description: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -77,16 +127,16 @@ export async function depositToSacco(amount: number, description: string) {
 
   // 2. Add to user's wallet (or create if not exist)
   let { data: userWallet } = await supabase
-    .schema('sacco')
-    .from('wallets')
+    
+    .schema('sacco').from('wallets')
     .select('*')
     .eq('profile_id', user.id)
     .single();
 
   if (!userWallet) {
     const { data: newWallet, error: createWalletError } = await supabase
-      .schema('sacco')
-      .from('wallets')
+      
+      .schema('sacco').from('wallets')
       .insert({ profile_id: user.id, balance: amount })
       .select()
       .single();
@@ -101,8 +151,8 @@ export async function depositToSacco(amount: number, description: string) {
 
   // 3. Add to SACCO's global wallet
   const { data: saccoWallets } = await supabase
-    .schema('sacco')
-    .from('wallets')
+    
+    .schema('sacco').from('wallets')
     .select('*')
     .eq('organization_id', orgRole.organization_id);
 
@@ -110,8 +160,8 @@ export async function depositToSacco(amount: number, description: string) {
 
   if (!saccoWallet) {
      const { data: newSaccoWallet } = await supabase
-      .schema('sacco')
-      .from('wallets')
+      
+      .schema('sacco').from('wallets')
       .insert({ organization_id: orgRole.organization_id, balance: amount })
       .select()
       .single();
@@ -130,7 +180,7 @@ export async function getBusinessAnalytics(businessId: string) {
   const supabase = await createClient();
   
   const { data, error } = await supabase
-    .schema('sacco')
+    
     .from('business_analytics_snapshots')
     .select('*')
     .eq('business_id', businessId)
@@ -151,7 +201,7 @@ export async function getBusinessCreditProfile(businessId: string) {
   const supabase = await createClient();
   
   const { data, error } = await supabase
-    .schema('sacco')
+    
     .from('business_credit_profiles')
     .select('*')
     .eq('business_id', businessId)
